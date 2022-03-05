@@ -1,4 +1,3 @@
-// DOM Elements
 const timeElem = document.querySelector('[data-time]')
 const dateElem = document.querySelector('[data-date]')
 const hourHand = document.querySelector('[data-hour-hand]')
@@ -6,84 +5,85 @@ const minuteHand = document.querySelector('[data-minute-hand]')
 const secondHand = document.querySelector('[data-second-hand]')
 const darkModeToggle = document.querySelector('#theme-toggle')
 
-// User prefered theme
-let themeMode = localStorage.getItem('darkMode')
+const MONTHS = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY',
+    'JUN', 'JUL', 'AUG', 'SEP', 'OCT',
+    'NOV', 'DEC'
+]
+const WEEKDAYS = [
+    'SUNDAY,', 'MONDAY,', 'TUESDAY,',
+    'WEDENESDAY,', 'THURSDAY,', 'FRIDAY,',
+    'SATURDAY,'
+]
 
-// Setting Date and Time
-const setTime = () => {
-    let time = [new Date().getHours(), new Date().getMinutes()]
-    return time
+const LOCAL_STORAGE_THEME_KEY = 'theme.mode'
+let preferredThemeOnLastVisit = localStorage.getItem(LOCAL_STORAGE_THEME_KEY)
+
+
+const getHoursAndMinutes = () => {
+    let [hours, minutes] = [new Date().getHours(), new Date().getMinutes()]
+    return [hours, minutes]
 }
-const setDate = () => {
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-    let month = months[new Date().getMonth()]
-
-    const weekDays = ['SUNDAY,', 'MONDAY,', 'TUESDAY,', 'WEDENESDAY,', 'THURSDAY,', 'FRIDAY,', 'SATURDAY,']
-    let weekDay = weekDays[new Date().getDay()]
-
-    let dayOfMonth = new Date().getDate()
-    return [weekDay, month, dayOfMonth]
+const getCurrentDate = () => {
+    const currentMonth = MONTHS[new Date().getMonth()]
+    const currentWeekDay = WEEKDAYS[new Date().getDay()]
+    const currentDayOfMonth = new Date().getDate()
+    return [currentWeekDay, currentMonth, currentDayOfMonth]
 }
 
-// Displaying Time
+const displayTime = () => {
+    timeElem.innerText = getHoursAndMinutes()
+        .map(number => number < 10 ? '0' + number.toString() : number.toString()).join(':')
+}
+const displayDate = () => {
+    dateElem.innerText = getCurrentDate().join(' ')
+}
 setInterval(() => {
-    timeElem.innerText = setTime().map(number => number < 10 ? '0' + number.toString() : number.toString()).join(':')
+    displayTime()
 }, 500);
 
-// Displaying Time and Date when the page loads
-window.onload = () => {
-    timeElem.innerText = setTime()
-        .map(number => number < 10 ? '0' + number.toString() : number.toString())
-        .join(':')
-    dateElem.innerText = setDate().join(' ')
+const setClockHandsRotationDegree = (hand, rotationRatio) => {
+    hand.style.setProperty('--rotation', rotationRatio * 360)
 }
 
-// Adjust hands position in the clock
-const setRotation = (element, rotationRatio) => {
-    element.style.setProperty('--rotation', rotationRatio * 360)
+const getRatioOfClockHand = () => {
+    const currentTime = new Date()
+    const secondsHandRatio = currentTime.getSeconds() / 60
+    const minutesHandRatio = (secondsHandRatio + currentTime.getMinutes()) / 60
+    const hoursHandRatio = (minutesHandRatio + currentTime.getHours()) / 12
+    return { secondsHandRatio, minutesHandRatio, hoursHandRatio }
 }
 
-// Running the clock
 const runClock = () => {
-    let currentTime = new Date()
-    let secondsRatio = currentTime.getSeconds() / 60
-    let minutesRatio = (secondsRatio + currentTime.getMinutes()) / 60
-    let hoursRatio = (minutesRatio + currentTime.getHours()) / 12
-
-    // Correct Hands' position/degree
-    setRotation(secondHand, secondsRatio)
-    setRotation(minuteHand, minutesRatio)
-    setRotation(hourHand, hoursRatio)
+    const { secondsHandRatio, minutesHandRatio, hoursHandRatio } = getRatioOfClockHand()
+    setClockHandsRotationDegree(secondHand, secondsHandRatio)
+    setClockHandsRotationDegree(minuteHand, minutesHandRatio)
+    setClockHandsRotationDegree(hourHand, hoursHandRatio)
 }
 runClock()
 setInterval(runClock, 1000)
 
-// Enable Dark Theme/Mode
 const enableDarkMode = () => {
-    // Add dark mode to DOM
     document.body.classList.add('dark-mode')
-    // Add theme to localStorage
-    localStorage.setItem('darkMode', 'enabled')
+    darkModeToggle.checked = true
+    localStorage.setItem(LOCAL_STORAGE_THEME_KEY, 'dark')
 }
-// Disable Dark Theme/Mode
 const disableDarkMode = () => {
-    // Remove dark mode
     document.body.classList.remove('dark-mode')
-    // Update theme in localStorage
-    localStorage.setItem('darkMode', null)
+    localStorage.setItem(LOCAL_STORAGE_THEME_KEY, null)
 }
 
-// Check for previous selected theme
-if (themeMode === 'enabled') {
-    enableDarkMode()
+const checkForDarkThemeOnLastVisit = () => {
+    if (preferredThemeOnLastVisit === 'dark') enableDarkMode()
 }
 
-// Adjust theme
 darkModeToggle.addEventListener('change', () => {
-    themeMode = localStorage.getItem('darkMode')
-    if (themeMode === 'enabled') {
-        disableDarkMode()
-    } else {
-        enableDarkMode()
-    }
+    preferredThemeOnLastVisit = localStorage.getItem(LOCAL_STORAGE_THEME_KEY)
+    preferredThemeOnLastVisit === 'dark' ? disableDarkMode() : enableDarkMode()
 })
+
+window.onload = () => {
+    displayTime()
+    displayDate()
+    checkForDarkThemeOnLastVisit()
+}
